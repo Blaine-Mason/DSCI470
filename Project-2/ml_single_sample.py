@@ -8,9 +8,9 @@ import fblib as fblib
 #samples = 50000
 percent = .9
 a = 1000
-b = 3000
+b = 2000
 step = 1000
-plts = False
+plts = True
 fb = True
 shape = "simplex"
 avg = 1
