@@ -16,6 +16,7 @@ shape = "simplex"
 avg = 1
 n = 2
 df = pd.DataFrame(columns=np.arange(a,b,step), index=[f"{n}"])
+
 if fb:
     error, samples = fblib.get_data(n, percent, a, b, step, plts, fb, shape, avg)
     temp = np.array(list(zip(error, samples)))

@@ -8,11 +8,8 @@ from tqdm import tqdm
 
 #samples = 50000
 percent = .9
-a = 1000
-b = 5000
 step = 1000
 plts = False
-fb = True
 shape = "simplex"
 avg = 1
 

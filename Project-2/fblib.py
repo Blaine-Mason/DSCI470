@@ -5,6 +5,7 @@ from sklearn.decomposition import FastICA
 from munkres import Munkres
 from tqdm import tqdm
 
+# Given the input n this function returns one Uniform sample inside of the l_1-Ball
 def ell_1(n):
     U = np.random.uniform(0,1,n)
     tmp = np.array([0,1])
@@ -20,6 +21,8 @@ def ell_1(n):
             Final[j] = Final[j]*(-1)
     return Final
 
+# Given the number of samples and dimension, this function returns "samples" many uniform samples
+# inside of the 1_1-ball. p_ defines the percentage of noise.
 def obtain_samples_lp(samples, n, p_):
     S = np.zeros((n, 1))
     for i in range(samples):
@@ -32,6 +35,7 @@ def obtain_samples_lp(samples, n, p_):
     S = np.delete(S, 0,1)
     return S
 
+# Given the input n this function returns one Uniform sample inside of the simplex
 def simplex(n):
     U = np.random.uniform(0,1,n)
     tmp = np.array([0,1])
@@ -43,7 +47,8 @@ def simplex(n):
     Final = np.reshape(Final, (n,1))
     return Final
 
-
+# Given the number of samples and dimension, this function returns "samples" many uniform samples
+# inside of the n-simplex. p_ defines the percentage of noise.
 def obtain_samples_simplex(samples, n, p_):
     S = np.zeros((n, 1))
     for i in range(samples):
@@ -58,11 +63,12 @@ def obtain_samples_simplex(samples, n, p_):
     S = S - mean
     return S, mean
 
-
+# Returns the Frob Norm between two nxn matricies.
 def Frobenius_Norm(A, A_):
     return np.sqrt(np.trace(np.subtract(A, A_)@np.subtract(A,A_).conj().T))
 
-
+# Using the munkres matching algorithm, this function obtains the difference between the 
+# two matrices outputted by ICA 
 def Get_Min(A,A_):
     weights = -abs((A.T@A_)**2)
     m = Munkres()
@@ -74,7 +80,8 @@ def Get_Min(A,A_):
     min_ = Frobenius_Norm(B, A)
     return min_ 
 
-
+# Using the ELS algorithm this method returns the difference between the learned verticies of 
+# the a transformed l_1-ball
 def llp(n, percent, samples, fb):
     S = obtain_samples_lp(samples, n, percent)
     A = np.random.normal(0,1,(n,n))
@@ -97,7 +104,8 @@ def llp(n, percent, samples, fb):
     else:
         return Get_Min(A, A_til)
 
-
+# Using the ELS algorithm this method returns the difference between the learned verticies of 
+# the a transformed simplex
 def lls(n, percent, samples, plots, fb):
     S, mean = obtain_samples_simplex(samples, n, percent)
     V = np.hstack((np.zeros((n,1)),np.eye(n,n))) - mean
@@ -138,7 +146,8 @@ def lls(n, percent, samples, plots, fb):
     else:
         return Get_Min(V/la.norm(V,2), verts/la.norm(verts,2))
 
-
+# Returns the 95th quantile of the data in a given direction defined by a point.  This 
+# values acts as the support of the floating body
 def support(X, val, q): # Set q to be the qth quantile
     return np.quantile((X.T).dot(val), q)
 
@@ -149,6 +158,7 @@ def compute_fb(X, q, n):
             polar_body = np.hstack((polar_body, np.array(X[:,i]).reshape(n,1)))
     return polar_body
 
+# This function given the parameters acts as the driver for the methods defines above.
 def get_data(n, percent, a, b, step, plts, fb, shape, avg):
     ret_error = np.zeros(len(range(a,b,step)))
     if fb: ret_samples_removed = np.zeros(len(range(a,b,step)))
