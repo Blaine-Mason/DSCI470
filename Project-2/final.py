@@ -7,27 +7,26 @@ import fblib as fblib
 from tqdm import tqdm
 
 #samples = 50000
-percent = .9
-step = 1000
-plts = False
-shape = "simplex"
-avg = 1
+
 
 # Create the menu
 menu = ConsoleMenu("Data Tool", "When plotting, if done successfully the script will crash and return to the menu.  This means things worked. The library I am using is no longer maintained, but does what I need.")
 
 # Create some items
-def test(b):
+def test(bol):
     a = int(input("Enter a lower bound for samples(e.g. 1000): "))
     b = int(input("Enter a upper bound for samples(e.g. 5000): "))
     step = int(input("Enter a step value(e.g. 100): "))
     avg = int(input("Enter the number of trials to average over(e.g. 10): "))
     filename = input("Enter a file name(do not include file ext): ")
     if a > b or step > b or a < 0 or b < 0:
-        print("Use your brain, follow directions")
+        print("Follow directions")
         Screen().input('Press [Enter] to continue')
         return
-    fb = b
+    fb = bol
+    percent = .9
+    plts = False
+    shape = "simplex"
     df = pd.DataFrame(columns=np.arange(a,b,step), index=["2", "3", "4", "5", "6", "7",
             "8", "9", "10"])
     for n in tqdm(np.arange(2,11,1)):
