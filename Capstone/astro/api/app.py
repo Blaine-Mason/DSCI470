@@ -62,11 +62,34 @@ class binary(db.Model):
     def __repr__(self):
         return f"<Star {self.apogeeID}>"
 #-------------------------------------------------------------
+class ccf_final(db.Model):
+    __tablename__ = 'ccfdatacomplete'
+    apogeeID = db.Column(db.String(), primary_key=True)
+    nvisits =  db.Column(db.Integer())
+    mjd = db.Column(db.ARRAY(db.Integer()))
+    ccf = db.Column(db.ARRAY(db.Float()))
+
+    def __init__(self, apogeeID, nvisits, mjd, ccf):
+       self.apogeeID = apogeeID
+       self.nvisits = nvisits
+       self.mjd = mjd
+       self.ccf = ccf
+
+    def __repr__(self):
+        return f"<Star {self.apogeeID}>"
+#-------------------------------------------------------------
 #HELPERS
 def ICA_helper(data):
     ica = FastICA(n_components=2, whiten='unit-variance')
     S_ica_ = ica.fit_transform(data.T) # Estimate the sources
     return S_ica_
+# @app.callback(Output(component_id='CCF', component_property= 'figure'),
+#               [Input(component_id='star_dropdown', component_property= 'value')], prevent_initial_call=True)
+# def ccf_plot(star_dropdown):
+#     app_id = star_dropdown.split(" ")[0]
+#     data = requests.get(f'http://127.0.0.1:8050/get-binary/{app_id}').json()
+#     data = data[star_dropdown.replace(" ","")]
+#     df = pd.DataFrame.from_dict(data)
 
 @app.callback(Output(component_id='ICA', component_property= 'figure'),
               [Input(component_id='star_dropdown', component_property= 'value')], prevent_initial_call=True)
@@ -105,11 +128,11 @@ def wavelength_plot(star_dropdown):
     df = pd.DataFrame.from_dict(data)
     fig = make_subplots(rows=1, cols=3)
     fig.add_trace(go.Scatter(x = df['A'][1], y = df['A'][0], mode="lines",
-    line_color='red'), row=1, col=1)
+    line_color='blue'), row=1, col=1)
     fig.add_trace(go.Scatter(x = df['B'][1], y = df['B'][0], mode="lines",
-    line_color='blue'), row=1, col=2)
+    line_color='green'), row=1, col=2)
     fig.add_trace(go.Scatter(x = df['C'][1], y = df['C'][0], mode="lines",
-    line_color='green'), row=1, col=3)
+    line_color='red'), row=1, col=3)
     return fig
 
 @app.callback(Output('star_dropdown', 'options'),
@@ -117,12 +140,29 @@ def wavelength_plot(star_dropdown):
 def update_options(value):
     ids = requests.get(f'http://127.0.0.1:8050/get-snr/{value}')
     result = dict(sorted(ids.json().items(), key=lambda item: item[1]))
-    all_ids_snr = [i[1][0] + "  " + str(i[1][1]) for i in result.items()]
+    print(result)
+    all_ids_snr = list(set([i[1][0] for i in result.items()]))
     all_ids = [i[1][0]  + " " + str(i[1][1]) for i in result.items()]
     ret_list = []
     for x,y in zip(all_ids_snr, all_ids):
         ret = {'label': x, 'value': y}
         ret_list.append(ret)
+    print(ret_list)
+    return ret_list
+
+@app.callback(Output('mjd_drop', 'options'),
+              [Input('snr', 'value'), Input('star_dropdown', 'value')], prevent_initial_call=True)
+def update_mjd_options(snr, mjd):
+    ids = requests.get(f'http://127.0.0.1:8050/get-snr/{snr}')
+    result = dict(sorted(ids.json().items(), key=lambda item: item[1]))
+    print(result)
+    all_mjd = [i[1][0] for i in result.items()]
+    all_ids = [i[1][0]  + " " + str(i[1][1]) for i in result.items()]
+    ret_list = []
+    for x,y in zip(all_ids_snr, all_ids):
+        ret = {'label': x, 'value': y}
+        ret_list.append(ret)
+    print(ret_list)
     return ret_list
 #-------------------------------------------------------------
 #HTML
@@ -156,6 +196,12 @@ controls = dbc.Card(
                 dcc.Dropdown( id = 'star_dropdown')
             ]
         ),
+        html.Div(
+            [
+                dbc.Label("MJD"),
+                dcc.Dropdown( id = 'mjd_drop')
+            ]
+        ),
     ],
     body=True,
 )
@@ -178,26 +224,21 @@ app.layout = dbc.Container(
     ],
     fluid=True,
 )
-# dcc.Dropdown( id = 'snr',
-        # options = [
-        #     {'label':'50', 'value':'50'},
-        #     {'label':'100', 'value':'100'},
-        #     {'label':'150', 'value':'150'},
-        #     {'label':'200', 'value':'200'},
-        #     {'label':'250', 'value':'250'},
-        #     {'label':'200', 'value':'200'},
-        #     {'label':'350', 'value':'350'},
-        #     {'label':'400', 'value':'400'},
-        #     {'label':'450', 'value':'450'},
-        #     {'label':'500', 'value':'500'},
-        #     ],
-        #     clearable=False),
-        # dcc.Dropdown( id = 'star_dropdown'),
-        # dcc.Graph(id = 'waveplot'),
-        # dcc.Graph(id = 'ICA'),
-    
 #-------------------------------------------------------------
 #ROUTES
+#RETURN HERE
+@app.server.route('/addccf', methods=['POST'])
+def handle_ccf():
+    if request.method == 'POST':
+        if request.is_json:
+            data = request.get_json()
+            temp_star = ccf_final(apogeeID= data["apogeeID"], nvisits= data["nvisits"], mjd= data["mjd"], ccf= data["ccf"])
+            db.session.add(temp_star)
+            db.session.commit()
+            return {"message": f"Star {temp_star.apogeeID} has been created successfully."}
+        else:
+            return {"error": "The request payload is not in JSON format"}
+        
 @app.server.route('/test', methods=['POST'])
 def handle_test():
     if request.method == 'POST':
@@ -242,8 +283,21 @@ def handle_apID(apogee_id_str):
         sample['A'] = [obj.fluxc, obj.wavelengthc]
         sample['B'] = [obj.fluxb, obj.wavelengthb]
         sample['C'] = [obj.fluxa, obj.wavelengtha]
+        sample['MJD'] = obj.mjd
         response[str(apogee_id_str)+str(obj.SNR)] = sample
     return jsonify(response)
+
+@app.server.route('/get-ccf/<apogee_id>', methods=['GET'])
+def handle_ccf_apID(apogee_id_str):
+    response = dict()
+    appid = binary.query.filter(binary.apogeeID == apogee_id_str)
+    nvisits = appid.nvisits
+    for i in range(nvisits):
+        sample = dict()
+        sample[str(appid.mjd[i])] = appid.ccf[i]
+    response = sample
+    return jsonify(response)
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
