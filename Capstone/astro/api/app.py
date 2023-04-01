@@ -83,20 +83,31 @@ def ICA_helper(data):
     ica = FastICA(n_components=2, whiten='unit-variance')
     S_ica_ = ica.fit_transform(data.T) # Estimate the sources
     return S_ica_
-# @app.callback(Output(component_id='CCF', component_property= 'figure'),
-#               [Input(component_id='star_dropdown', component_property= 'value')], prevent_initial_call=True)
-# def ccf_plot(star_dropdown):
-#     app_id = star_dropdown.split(" ")[0]
-#     data = requests.get(f'http://127.0.0.1:8050/get-binary/{app_id}').json()
-#     data = data[star_dropdown.replace(" ","")]
-#     df = pd.DataFrame.from_dict(data)
+
+@app.callback(Output(component_id='CCF', component_property= 'figure'),
+              [Input(component_id='mjd_drop', component_property= 'value')], prevent_initial_call=True)
+def ccf_plot(star_dropdown):
+    app_id = star_dropdown.split(" ")[0]
+    data = requests.get(f'http://127.0.0.1:8050/get-ccf/{app_id}').json()
+
+    data = data[str(star_dropdown.split(" ")[2])]
+    print(data)
+    df = pd.DataFrame.from_dict(data)
+    ccf_y = df[str(star_dropdown.split(" ")[2])]
+    ccf_x = np.arange(-382,383, 1)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x = ccf_x, y = ccf_y, mode="lines", line_color='rgb(38,84,124)'))
+    print(ccf_x)
+    print(ccf_y)
+    return fig 
 
 @app.callback(Output(component_id='ICA', component_property= 'figure'),
-              [Input(component_id='star_dropdown', component_property= 'value')], prevent_initial_call=True)
+              [Input(component_id='mjd_drop', component_property= 'value')], prevent_initial_call=True)
 def ICA_plot(star_dropdown):
     app_id = star_dropdown.split(" ")[0]
     data = requests.get(f'http://127.0.0.1:8050/get-binary/{app_id}').json()
-    data = data[star_dropdown.replace(" ","")]
+    temp = star_dropdown.split(" ")[0] + star_dropdown.split(" ")[1]
+    data = data[temp]
     df = pd.DataFrame.from_dict(data)
     ica_A = np.vstack((df['A'][1], df['A'][0]))
     ica_B = np.vstack((df['B'][1], df['B'][0]))
@@ -113,7 +124,8 @@ def ICA_plot(star_dropdown):
     fig.add_trace(go.Scatter(x = df['C'][1], y = s_C[:,0], mode="lines", line_color='rgb(38,84,124)'), row=1, col=3)
     fig.add_trace(go.Scatter(x = df['C'][1], y = s_C[:,1], mode="lines", line_color='rgb(239,71,11)'), row=1, col=3)
     sb2_data = requests.get(f'http://127.0.0.1:8050/get-av/{app_id}').json()
-    sb2_data = sb2_data[star_dropdown.replace(" ","")]
+    temp = star_dropdown.split(" ")[0] + star_dropdown.split(" ")[1]
+    sb2_data = sb2_data[temp]
     amp = sb2_data["AMP"]
     vhelio = sb2_data["VHELIO"]
     fwhm = sb2_data["FWHM"]
@@ -121,10 +133,12 @@ def ICA_plot(star_dropdown):
     return fig  
 
 @app.callback(Output(component_id='waveplot', component_property= 'figure'),
-              [Input(component_id='star_dropdown', component_property= 'value')], prevent_initial_call=True)
+              [Input(component_id='mjd_drop', component_property= 'value')], prevent_initial_call=True)
 def wavelength_plot(star_dropdown):
-    data = requests.get(f'http://127.0.0.1:8050/get-binary/{star_dropdown[0:18]}').json()
-    data = data[star_dropdown.replace(" ","")]
+    app_id = star_dropdown.split(" ")[0]
+    data = requests.get(f'http://127.0.0.1:8050/get-binary/{app_id}').json()
+    temp = star_dropdown.split(" ")[0] + star_dropdown.split(" ")[1]
+    data = data[temp]
     df = pd.DataFrame.from_dict(data)
     fig = make_subplots(rows=1, cols=3)
     fig.add_trace(go.Scatter(x = df['A'][1], y = df['A'][0], mode="lines",
@@ -140,29 +154,31 @@ def wavelength_plot(star_dropdown):
 def update_options(value):
     ids = requests.get(f'http://127.0.0.1:8050/get-snr/{value}')
     result = dict(sorted(ids.json().items(), key=lambda item: item[1]))
-    print(result)
     all_ids_snr = list(set([i[1][0] for i in result.items()]))
-    all_ids = [i[1][0]  + " " + str(i[1][1]) for i in result.items()]
     ret_list = []
-    for x,y in zip(all_ids_snr, all_ids):
-        ret = {'label': x, 'value': y}
+    for x in all_ids_snr:
+        ret = {'label': x, 'value': x}
         ret_list.append(ret)
-    print(ret_list)
     return ret_list
 
 @app.callback(Output('mjd_drop', 'options'),
-              [Input('snr', 'value'), Input('star_dropdown', 'value')], prevent_initial_call=True)
-def update_mjd_options(snr, mjd):
+              [Input('star_dropdown', 'value'), Input('snr', 'value')], prevent_initial_call=True)
+def update_mjd_options(appid, snr):
     ids = requests.get(f'http://127.0.0.1:8050/get-snr/{snr}')
     result = dict(sorted(ids.json().items(), key=lambda item: item[1]))
-    print(result)
-    all_mjd = [i[1][0] for i in result.items()]
-    all_ids = [i[1][0]  + " " + str(i[1][1]) for i in result.items()]
+    mjd_lst = []
+    snr_lst = []
+    for i in result.items():
+        if i[1][0] == str(appid):
+            mjd_lst.append(i[1][2])
+            snr_lst.append(i[1][1])
+    label_lst = ["MJD: " + str(m) + " SNR:" + str(s) for m,s in zip(mjd_lst,snr_lst)]
+    valuelist = [str(appid)+ " " + str(s) + " " + str(mj) for s,mj in zip(snr_lst, mjd_lst)]
+    print(valuelist)
     ret_list = []
-    for x,y in zip(all_ids_snr, all_ids):
+    for x,y in zip(label_lst, valuelist):
         ret = {'label': x, 'value': y}
         ret_list.append(ret)
-    print(ret_list)
     return ret_list
 #-------------------------------------------------------------
 #HTML
@@ -216,7 +232,7 @@ app.layout = dbc.Container(
         align = "center",
         ),
         dbc.Row([
-            dbc.Col([dcc.Graph(id = 'waveplot'), dcc.Graph(id = 'ICA')]),
+            dbc.Col([dcc.Graph(id = 'waveplot'), dcc.Graph(id = 'ICA'), dcc.Graph(id = 'CCF')]),
             
         ],
         align = "center",
@@ -258,7 +274,7 @@ def handle_snr(target_snr):
     star = binary.query.filter(binary.SNR >= target_snr)
     i= 0
     for obj in star:
-        sample[str(i)] = [obj.apogeeID,obj.SNR]
+        sample[str(i)] = [obj.apogeeID,obj.SNR,obj.mjd]
         i += 1
     return jsonify(sample)
 
@@ -284,17 +300,19 @@ def handle_apID(apogee_id_str):
         sample['B'] = [obj.fluxb, obj.wavelengthb]
         sample['C'] = [obj.fluxa, obj.wavelengtha]
         sample['MJD'] = obj.mjd
+        sample['fname'] = obj.filename
         response[str(apogee_id_str)+str(obj.SNR)] = sample
     return jsonify(response)
 
-@app.server.route('/get-ccf/<apogee_id>', methods=['GET'])
+@app.server.route('/get-ccf/<apogee_id_str>', methods=['GET'])
 def handle_ccf_apID(apogee_id_str):
     response = dict()
-    appid = binary.query.filter(binary.apogeeID == apogee_id_str)
-    nvisits = appid.nvisits
-    for i in range(nvisits):
-        sample = dict()
-        sample[str(appid.mjd[i])] = appid.ccf[i]
+    appid = ccf_final.query.filter(ccf_final.apogeeID == apogee_id_str).all()
+    nvisits = appid[0].nvisits
+    print(nvisits)
+    sample = dict()
+    for i in range(0,nvisits-2):
+        sample[str(abs(2400000 - appid[0].mjd[i]))] = appid[0].ccf[i]
     response = sample
     return jsonify(response)
 
