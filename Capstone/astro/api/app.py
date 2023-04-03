@@ -221,6 +221,7 @@ controls = dbc.Card(
     ],
     body=True,
 )
+
 #DEFINE app.layout HERE
 app.layout = dbc.Container(
     [
