@@ -58,11 +58,11 @@ def main():
 
     sb2_info_list = [[b2[0],b2[1][0]] for b2 in sb2_mjd]
     #Get the index of all_visit data that matches sb2_appid_lst
-    filtered_allVisit = filter_allVisit(visit_id_list, visit_raw, sb2_info_list)
-    f = open("dat_allvisit.txt", "a")
-    for x in filtered_allVisit:
-        f.write(x)
-    f.close()
+    visit_id_list_temp = visit_id_list[0:5]
+    visit_raw_temp = visit_raw[0:5]
+    sb2_info_list_temp = sb2_info_list[0:5]
+    filtered_allVisit = filter_allVisit(visit_id_list_temp, visit_raw_temp, sb2_info_list_temp)
+    print(filtered_allVisit)
     return 0
 if __name__ == "__main__":
     main()
