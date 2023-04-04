@@ -30,9 +30,10 @@ def filter_allVisit(visit_id, visit, id_lst):
     for dat in tqdm(id_lst):
         dat_mjd = dat[0]
         dat_id = dat[1]
-        temp = list(locate(visit_id, lambda x:x[1] == dat_mjd and x[0] == dat_id))
+        temp = list(locate(visit_id[offset:-1], lambda x:x[1] == dat_mjd and x[0] == dat_id))
         if len(temp) > 0:
-            ret.append(visit[temp[0]][0])
+            idx = temp[0]
+            ret.append([visit[idx][3], idx])
         else:
             continue
     return ret
@@ -41,9 +42,6 @@ def dict_display(dict,N):
     for i in range(0,N):
         print(list(dict.items())[i])
         print("")
-
-
-visit_id_list
 
 
 pip install numpy==1.21.5
@@ -69,11 +67,17 @@ visit_id_list = [[visit[0], visit[7]] for visit in visit_raw]
 sb2_info_list = [[b2[0],b2[1][0]] for b2 in sb2_mjd] 
 
 
+visit_raw[656][3]
+
+
+filtered_allVisit = filter_allVisit(visit_id_list, visit_raw, sb2_info_list[0:4])
+
+
 #Get the index of all_visit data that matches sb2_appid_lst
-filtered_allVisit = filter_allVisit(visit_id_list, visit_raw, sb2_info_list)
+filtered_allVisit = filter_allVisit(visit_id_list, visit_raw, sb2_info_list[0:100])
 
 
-len(filtered_allVisit)
+filtered_allVisit
 
 
 len(sb2_mjd)
