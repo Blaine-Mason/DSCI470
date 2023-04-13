@@ -14,17 +14,17 @@ from sklearn.decomposition import FastICA
 
 server = Flask(__name__)
 app = dash.Dash(__name__, server=server, url_base_pathname='/dashboard/', external_stylesheets=[dbc.themes.MORPH])
-CONNSTR = f'postgresql://Blaine-Mason:ALrWl9PMXok2@ep-shy-poetry-131814.us-east-2.aws.neon.tech/neondb'
+CONNSTR = f'postgresql://Blaine-Mason:bCNnFD5r8apO@ep-shy-poetry-131814.us-east-2.aws.neon.tech/finaldb'
 app.server.config['SQLALCHEMY_DATABASE_URI'] = CONNSTR
 db = SQLAlchemy(app.server)
 migrate = Migrate(app.server, db)
-
+#bCNnFD5r8apO
 class binary(db.Model):
-    __tablename__ = 'binarysystem'
-    filename = db.Column(db.String, primary_key=True)
+    __tablename__ = 'binaryfinal'
+    temp_col = db.Column(db.Integer, primary_key = True)
+    filename = db.Column(db.String())
     mjd = db.Column(db.Integer())
     apogeeID = db.Column(db.String())
-    visitno =  db.Column(db.Integer())
     fluxa = db.Column(db.ARRAY(db.Float()))
     wavelengtha =  db.Column(db.ARRAY(db.Float()))
     fluxb = db.Column(db.ARRAY(db.Float()))
@@ -39,12 +39,12 @@ class binary(db.Model):
     fwhmb = db.Column(db.Float())
     SNR = db.Column(db.Float())
 
-    def __init__(self, filename, mjd, apogeeID, visitno, fluxa, wavelengtha, fluxb, wavelengthb, fluxc, wavelengthc,
+    def __init__(self, temp, filename, mjd, apogeeID, fluxa, wavelengtha, fluxb, wavelengthb, fluxc, wavelengthc,
                  ampa, vhelioa, fwhma, ampb, vheliob, fwhmb, SNR):
+        self.temp_col = temp
         self.filename = filename
         self.mjd = mjd
         self.apogeeID = apogeeID
-        self.visitno =  visitno
         self.fluxa = fluxa
         self.wavelengtha = wavelengtha
         self.fluxb = fluxb
@@ -63,7 +63,7 @@ class binary(db.Model):
         return f"<Star {self.apogeeID}>"
 #-------------------------------------------------------------
 class ccf_final(db.Model):
-    __tablename__ = 'ccfdatacomplete'
+    __tablename__ = 'ccfdata'
     apogeeID = db.Column(db.String(), primary_key=True)
     nvisits =  db.Column(db.Integer())
     mjd = db.Column(db.ARRAY(db.Integer()))
@@ -89,16 +89,11 @@ def ICA_helper(data):
 def ccf_plot(star_dropdown):
     app_id = star_dropdown.split(" ")[0]
     data = requests.get(f'http://127.0.0.1:8050/get-ccf/{app_id}').json()
-
     data = data[str(star_dropdown.split(" ")[2])]
-    print(data)
-    df = pd.DataFrame.from_dict(data)
-    ccf_y = df[str(star_dropdown.split(" ")[2])]
+    ccf_y = data
     ccf_x = np.arange(-382,383, 1)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x = ccf_x, y = ccf_y, mode="lines", line_color='rgb(38,84,124)'))
-    print(ccf_x)
-    print(ccf_y)
     return fig 
 
 @app.callback(Output(component_id='ICA', component_property= 'figure'),
@@ -174,7 +169,6 @@ def update_mjd_options(appid, snr):
             snr_lst.append(i[1][1])
     label_lst = ["MJD: " + str(m) + " SNR:" + str(s) for m,s in zip(mjd_lst,snr_lst)]
     valuelist = [str(appid)+ " " + str(s) + " " + str(mj) for s,mj in zip(snr_lst, mjd_lst)]
-    print(valuelist)
     ret_list = []
     for x,y in zip(label_lst, valuelist):
         ret = {'label': x, 'value': y}
@@ -261,7 +255,7 @@ def handle_test():
     if request.method == 'POST':
         if request.is_json:
             data = request.get_json()
-            temp_star = binary(filename = data["filename"], apogeeID= data["apogeeID"], visitno= data["visitno"], fluxa= data["fluxa"], wavelengtha= data["wavelengtha"], fluxb= data["fluxb"], wavelengthb= data["wavelengthb"], fluxc= data["fluxc"], wavelengthc= data["wavelengthc"],
+            temp_star = binary(temp = data["temp"], filename = data["filename"], apogeeID= data["apogeeID"], fluxa= data["fluxa"], wavelengtha= data["wavelengtha"], fluxb= data["fluxb"], wavelengthb= data["wavelengthb"], fluxc= data["fluxc"], wavelengthc= data["wavelengthc"],
                  ampa= data["ampa"], vhelioa= data["vhelioa"], fwhma= data["fwhma"], ampb= data["ampb"], vheliob= data["vheliob"], fwhmb= data["fwhmb"], SNR= data["SNR"], mjd= data["mjd"])
             db.session.add(temp_star)
             db.session.commit()
@@ -310,9 +304,8 @@ def handle_ccf_apID(apogee_id_str):
     response = dict()
     appid = ccf_final.query.filter(ccf_final.apogeeID == apogee_id_str).all()
     nvisits = appid[0].nvisits
-    print(nvisits)
     sample = dict()
-    for i in range(0,nvisits-2):
+    for i in range(0,nvisits):
         sample[str(abs(2400000 - appid[0].mjd[i]))] = appid[0].ccf[i]
     response = sample
     return jsonify(response)
