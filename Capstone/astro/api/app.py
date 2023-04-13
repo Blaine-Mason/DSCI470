@@ -216,6 +216,31 @@ controls = dbc.Card(
     body=True,
 )
 
+data_info = dbc.Card(
+            [
+                html.Div(
+                    [
+                        html.Div("SNR:"),
+                        html.Div("afsafas"),
+                        html.Div("alsfasf"),
+                    ],className="grid-container",
+                ),
+                html.Div(
+                    [
+                        html.Div("SNR:"),
+                        html.Div("afsafas"),
+                        html.Div("alsfasf"),
+                    ],className="grid-container",
+                ),
+                html.Div(
+                    [
+                        html.Div("SNR:"),
+                        html.Div("afsafas"),
+                        html.Div("alsfasf"),
+                    ],className="grid-container",
+                )
+            ]
+)
 #DEFINE app.layout HERE
 app.layout = dbc.Container(
     [
@@ -223,6 +248,7 @@ app.layout = dbc.Container(
         # html.Hr(),
         dbc.Row([
             dbc.Col(controls,md=6),
+            dbc.Col(data_info, md=6)
         ],
         align = "center",
         ),
