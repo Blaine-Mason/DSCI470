@@ -229,7 +229,7 @@ for idx in idxList:
 dirs = ["https://data.sdss.org/sas/dr17/apogee/spectro/redux/dr17/stars/" + d for d in dirs]
 
 
-f = open("data_apstar.txt", "a")
+f = open("data_apstar_new.txt", "a")
 for d in dirs:
     f.write(d + "\n")
 f.close()
